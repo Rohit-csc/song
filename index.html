@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Faasle</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: black;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background-color: black;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <!-- 🎵 Song playback -->
+  <audio id="bgSong" src="song.mp3" autoplay loop muted></audio>
+
+  <canvas id="screen"></canvas>
+
+  <script>
+    const canvas = document.getElementById("screen");
+    const ctx = canvas.getContext("2d");
+
+    const song = document.getElementById("bgSong");
+
+    // ✅ autoplay fix
+    window.addEventListener("load", () => {
+      song.play().then(() => {
+        setTimeout(() => { song.muted = false; }, 500);
+      }).catch(() => {
+        document.body.addEventListener("click", () => {
+          song.muted = false;
+          song.play();
+        }, { once: true });
+      });
+    });
+
+    // 🔥 Responsive resize
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.font = Math.floor(canvas.height / 18) + "px Georgia"; // smaller font for mobile
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    const colors = [
+      "rgb(82, 8, 23)",
+      "rgb(120, 30, 60)",
+      "rgb(176, 60, 92)",
+      "rgb(250, 195, 210)",
+      "rgb(60, 25, 70)"
+    ];
+
+    const lyrics = [
+      "Baatein Zaroori Hain,",
+      "Tera Milna Bhi Zaroori...",
+      "Maine Mita Deni,",
+      "Yeh Jo Teri Meri Doori.",
+      "Jhoothi Hain Woh Raahein Saari, Duniya Ki,",
+      "Ishq Jahaan Naa Chale...",
+      "Tera Hona, Mera Hona, Kya Hona,",
+      "Agar Naa Dono Mile...",
+      "Tu Pehla Pehla Pyaar Hai Mera"
+    ];
+
+    const durations = [0.6, 1.4, 1.5, 1.0, 0.3, 1.4, 0.2, 0.4, 1.0, 0.9];
+
+    // 📝 helper: wrap text into multiple lines
+    function wrapText(text, maxWidth) {
+      const words = text.split(" ");
+      const lines = [];
+      let line = "";
+      for (let w of words) {
+        const testLine = line + w + " ";
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line !== "") {
+          lines.push(line);
+          line = w + " ";
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+      return lines;
+    }
+
+    async function typewriterText(text, bgColor, charDelay=70, duration=1200) {
+      let current = "";
+      for (let char of text) {
+        current += char;
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "white";
+        const lines = wrapText(current, canvas.width * 0.8);
+        const lineHeight = parseInt(ctx.font, 10) * 1.2;
+        const startY = canvas.height/2 - (lines.length-1)*lineHeight/2;
+        lines.forEach((line, i) => {
+          ctx.fillText(line.trim(), canvas.width/2, startY + i*lineHeight);
+        });
+
+        await new Promise(r => setTimeout(r, charDelay));
+      }
+
+      // Hold full line
+      await new Promise(r => setTimeout(r, duration));
+
+      // Fade out
+      for (let alpha = 1; alpha >= 0; alpha -= 0.05) {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        const lines = wrapText(text, canvas.width * 0.8);
+        const lineHeight = parseInt(ctx.font, 10) * 1.2;
+        const startY = canvas.height/2 - (lines.length-1)*lineHeight/2;
+        lines.forEach((line, i) => {
+          ctx.fillText(line.trim(), canvas.width/2, startY + i*lineHeight);
+        });
+
+        await new Promise(r => setTimeout(r, 40));
+      }
+    }
+
+    async function runLyrics() {
+      for (let i = 0; i < lyrics.length; i++) {
+        const bg = colors[Math.floor(Math.random() * colors.length)];
+        await typewriterText(lyrics[i], bg, 70, durations[i]*1000);
+      }
+    }
+
+    runLyrics();
+  </script>
+</body>
+</html>
